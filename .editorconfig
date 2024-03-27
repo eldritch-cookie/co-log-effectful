@@ -1,0 +1,3 @@
+root = true
+[**.hs]
+indent-size = 2
