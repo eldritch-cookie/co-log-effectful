@@ -7,11 +7,14 @@ module Effectful.Colog (
 where
 
 import Colog.Core.Action
+import Data.Functor.Classes
 import Data.Kind
+import Data.Time
 import Effectful
 import Effectful.Dispatch.Static
 import Effectful.Internal.Env (Env, Relinker (..), consEnv, unconsEnv)
 import Effectful.Internal.Utils (inlineBracket)
+import GHC.Generics (Generic, Generic1)
 import Prelude hiding (log)
 
 type Log :: Type -> Effect
@@ -41,4 +44,36 @@ runLogAction logAct act = unsafeEff $ \env -> do
 relinkLog :: Relinker StaticRep (Log msg)
 relinkLog = Relinker $ \relink (MkLog localEs act) -> do
   newLocalEs <- relink localEs
-  pure (MkLog newLocalEs act)
+  pure $ MkLog newLocalEs act
+
+-- structured logging
+data Severity where
+  MkDebugS :: Severity
+  MkInfoS :: Severity
+  MkNoticeS :: Severity
+  MkWarningS :: Severity
+  MkErrorS :: Severity
+  MkCriticalS :: Severity
+  MkAlertS :: Severity
+  MkEmergencyS :: Severity
+  deriving (Eq, Ord, Show, Generic, Enum, Bounded)
+
+data Message a where
+  MkMessage ::
+    { time :: UTCTime
+    , payload :: a
+    , severity :: Severity
+    } ->
+    Message a
+  deriving (Eq, Ord, Show, Generic, Functor, Traversable, Foldable, Generic1)
+
+instance Eq1 Message where
+  liftEq comp m1 m2 = comp m1.payload m2.payload && m1.time == m2.time && m1.severity == m2.severity
+instance Ord1 Message where
+  liftCompare comp m1 m2 = case compare m1.time m2.time of
+    LT -> LT
+    EQ -> case compare m1.severity m2.severity of
+      LT -> LT
+      EQ -> comp m1.payload m2.payload
+      GT -> GT
+    GT -> GT

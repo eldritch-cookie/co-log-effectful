@@ -59,6 +59,7 @@ common deps
     , co-log-core
     , effectful-core
     , text
+    , time
 
   default-extensions:
     DataKinds
