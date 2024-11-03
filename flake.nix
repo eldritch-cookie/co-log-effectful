@@ -69,16 +69,27 @@
           };
         };
         haskellProjects.default = {
-          basePackages = pkgs.haskell.packages.ghc98;
+          basePackages = pkgs.haskell.packages.ghc910;
           autoWire = ["checks" "apps" "packages"];
-          defaults.devShell.tools = hp: {inherit (hp) cabal-install;};
+          defaults.devShell.tools = hp: {inherit (hp) cabal-install haskell-language-server;};
           devShell = {
             tools = hp:
               with hp; {
-                fast-tags = fast-tags;
                 haskell-dap = haskell-dap;
               };
           };
+          otherOverlays = [
+            (hself: hsuper: {
+              warp = pkgs.haskell.lib.dontCheck hsuper.warp_3_4_3;
+              http-semantics =
+                hself.callHackageDirect {
+                  pkg = "http-semantics";
+                  ver = "0.2.1";
+                  sha256 = "sha256-Mpog3BRVV2Wyba7Nuzsa8Dzb8oATLnoxCpvF31EI2JY=";
+                }
+                {};
+            })
+          ];
         };
         devshells.default = {
           devshell = {

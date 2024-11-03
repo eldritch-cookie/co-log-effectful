@@ -85,7 +85,7 @@ library
   exposed-modules: Effectful.Colog
   hs-source-dirs:  src
 
-test-suite placeholder-test
+test-suite co-log-effectful-test
   import:             deps
   type:               exitcode-stdio-1.0
   hs-source-dirs:     test
