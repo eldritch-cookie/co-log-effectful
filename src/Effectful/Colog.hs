@@ -1,23 +1,41 @@
 module Effectful.Colog (
+  -- * Effect
   Log,
   LogEff,
-  runLogAction,
   logMsg,
+  injectLog,
+
+  -- ** Handlers
+  runLogAction,
+  runLogByTellShared,
+  runLogByTellLocal,
+
+  -- ** 'LogAction's
+  tellLogEff,
+
+  -- *** IOE constrained
+  byteStringLogEff,
+  textLogEff,
+
+  -- * Re-exports
   module Colog.Core.Action,
 )
 where
 
 import Colog.Core.Action
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Kind
-import Data.Time
+import Data.Text (Text)
+import Data.Text.Encoding (encodeUtf8)
 import Effectful
 import Effectful.Dispatch.Static
 import Effectful.Internal.Env (Env, Relinker (..), consEnv, unconsEnv)
 import Effectful.Internal.Utils (inlineBracket)
-import GHC.Generics (Generic, Generic1)
-import GHC.Stack
+import Effectful.Writer.Dynamic (Writer, runWriterLocal, runWriterShared, tell)
+import System.IO (Handle)
 
--- | Effect
+-- | Provides the ability to log with an implicit 'LogEff'
 type Log :: Type -> Effect
 data Log msg m a
 
@@ -36,7 +54,7 @@ relinkLog = Relinker $ \relink (MkLog localEs act) -> do
   newLocalEs <- relink localEs
   pure $ MkLog newLocalEs act
 
--- | runs the 'Log' effect using the provided action
+-- | runs the 'Log' effect using the provided action this is the most general runner
 runLogAction :: forall es msg a. LogEff es msg -> Eff (Log msg : es) a -> Eff es a
 runLogAction logAct act = unsafeEff $ \env -> do
   inlineBracket
@@ -44,40 +62,32 @@ runLogAction logAct act = unsafeEff $ \env -> do
     unconsEnv
     (\es -> unEff act es)
 
+-- | runs the 'Log' effect using 'tellLogEff' and then handles the dynamic 'Writer' effect with 'runWriterShared'
+runLogByTellShared :: forall es msg a. (Monoid msg) => Eff (Log msg : es) a -> Eff es (a, msg)
+runLogByTellShared = runWriterShared . runLogAction tellLogEff . inject
+
+-- | runs the 'Log' effect using 'tellLogEff' and then handles the dynamic 'Writer' effect with 'runWriterLocal'
+runLogByTellLocal :: forall es msg a. (Monoid msg) => Eff (Log msg : es) a -> Eff es (a, msg)
+runLogByTellLocal = runWriterLocal . runLogAction tellLogEff . inject
+
 -- | logs a message using the implicit 'LogEff'
 logMsg :: forall msg es. (Log msg :> es) => msg -> Eff es ()
 logMsg message = do
   MkLog env act <- getStaticRep
   unsafeEff_ $ unLogEff act message env
 
--- | TODO
+-- | converts a 'LogEff' into another compatible 'LogEff'
 injectLog :: forall (xs :: [Effect]) (es :: [Effect]) a. (Subset xs es) => LogEff xs a -> LogEff es a
 injectLog = hoistLogAction inject
 
--- structured logging
-data Severity where
-  MkDebugS :: Severity
-  MkInfoS :: Severity
-  MkNoticeS :: Severity
-  MkWarningS :: Severity
-  MkErrorS :: Severity
-  MkCriticalS :: Severity
-  MkAlertS :: Severity
-  MkEmergencyS :: Severity
-  deriving (Eq, Ord, Show, Generic, Enum, Bounded)
+-- | 'LogEff' that delegates to a dynamic 'Writer' effect
+tellLogEff :: forall es msg. (Writer msg :> es) => LogEff es msg
+tellLogEff = LogAction tell
 
-data Message a where
-  MkMessage ::
-    forall a.
-    { time :: UTCTime
-    , callstack :: CallStack
-    , payload :: a
-    , severity :: Severity
-    } ->
-    Message a
-  deriving (Show, Generic, Functor, Traversable, Foldable, Generic1)
+-- | 'LogEff' that writes 'Text' to a 'Handle'
+textLogEff :: forall es. (IOE :> es) => Handle -> LogEff es Text
+textLogEff hdl = LogAction $ liftIO . BS.hPutStr hdl . encodeUtf8
 
-generateMessage :: forall a m. (MonadIO m) => Severity -> a -> m (Message a)
-generateMessage sev payload = do
-  time <- liftIO getCurrentTime
-  pure $ MkMessage time callStack payload sev
+-- | 'LogEff' that writes 'ByteString' to a 'Handle'
+byteStringLogEff :: forall es. (IOE :> es) => Handle -> LogEff es ByteString
+byteStringLogEff hdl = LogAction $ liftIO . BS.hPutStr hdl

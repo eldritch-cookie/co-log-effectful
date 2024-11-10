@@ -52,14 +52,18 @@ extra-doc-files: CHANGELOG.md
 -- extra-source-files:
 
 common deps
-  ghc-options:        -Wall
+  ghc-options:        -Wall -fplugin=Effectful.Plugin
   build-depends:
     , base
     , bytestring
     , co-log-core
+    , directory
+    , effectful
     , effectful-core
+    , effectful-plugin
+    , file-io
+    , filepath
     , text
-    , time
 
   default-extensions:
     DataKinds
@@ -90,6 +94,7 @@ test-suite co-log-effectful-test
   type:               exitcode-stdio-1.0
   hs-source-dirs:     test
   main-is:            Main.hs
+  other-modules:      Effectful.CologTest
   build-depends:
     , co-log-effectful
     , QuickCheck
