@@ -7,8 +7,7 @@ module Effectful.Colog (
 
   -- ** Handlers
   runLogAction,
-  runLogByTellShared,
-  runLogByTellLocal,
+  runLogWriter,
 
   -- ** 'LogAction's
   tellLogEff,
@@ -32,7 +31,9 @@ import Effectful
 import Effectful.Dispatch.Static
 import Effectful.Internal.Env (Env, Relinker (..), consEnv, unconsEnv)
 import Effectful.Internal.Utils (inlineBracket)
-import Effectful.Writer.Dynamic (Writer, runWriterLocal, runWriterShared, tell)
+import Effectful.Writer.Static.Shared (Writer, runWriter, tell)
+import Effectful.FileSystem.IO.ByteString (hPutStr)
+import Effectful.FileSystem (FileSystem)
 import System.IO (Handle)
 
 -- | Provides the ability to log with an implicit 'LogEff'
@@ -62,13 +63,10 @@ runLogAction logAct act = unsafeEff $ \env -> do
     unconsEnv
     (\es -> unEff act es)
 
--- | runs the 'Log' effect using 'tellLogEff' and then handles the dynamic 'Writer' effect with 'runWriterShared'
-runLogByTellShared :: forall es msg a. (Monoid msg) => Eff (Log msg : es) a -> Eff es (a, msg)
-runLogByTellShared = runWriterShared . runLogAction tellLogEff . inject
+-- | runs the 'Log' effect using 'tellLogEff' and then handles the 'Writer' effect
+runLogWriter :: forall es msg a. (Monoid msg) => Eff (Log msg : es) a -> Eff es (a, msg)
+runLogWriter = runWriter . runLogAction tellLogEff . inject
 
--- | runs the 'Log' effect using 'tellLogEff' and then handles the dynamic 'Writer' effect with 'runWriterLocal'
-runLogByTellLocal :: forall es msg a. (Monoid msg) => Eff (Log msg : es) a -> Eff es (a, msg)
-runLogByTellLocal = runWriterLocal . runLogAction tellLogEff . inject
 
 -- | logs a message using the implicit 'LogEff'
 logMsg :: forall msg es. (Log msg :> es) => msg -> Eff es ()
@@ -80,14 +78,17 @@ logMsg message = do
 injectLog :: forall (xs :: [Effect]) (es :: [Effect]) a. (Subset xs es) => LogEff xs a -> LogEff es a
 injectLog = hoistLogAction inject
 
--- | 'LogEff' that delegates to a dynamic 'Writer' effect
-tellLogEff :: forall es msg. (Writer msg :> es) => LogEff es msg
+-- untested
+-- | 'LogEff' that delegates to a static shared 'Writer' effect
+tellLogEff :: forall es msg. (Writer msg :> es,Monoid msg) => LogEff es msg
 tellLogEff = LogAction tell
 
+-- untested
 -- | 'LogEff' that writes 'Text' to a 'Handle'
-textLogEff :: forall es. (IOE :> es) => Handle -> LogEff es Text
-textLogEff hdl = LogAction $ liftIO . BS.hPutStr hdl . encodeUtf8
+textLogEff :: forall es. (FileSystem :> es) => Handle -> LogEff es Text
+textLogEff hdl = LogAction $ hPutStr hdl . encodeUtf8
 
+-- untested
 -- | 'LogEff' that writes 'ByteString' to a 'Handle'
-byteStringLogEff :: forall es. (IOE :> es) => Handle -> LogEff es ByteString
-byteStringLogEff hdl = LogAction $ liftIO . BS.hPutStr hdl
+byteStringLogEff :: forall es. (FileSystem :> es) => Handle -> LogEff es ByteString
+byteStringLogEff hdl = LogAction $ hPutStr hdl

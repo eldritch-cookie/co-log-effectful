@@ -1,0 +1,6 @@
+packages:
+  ./.
+ignore-project: False
+tests: True
+coverage: True
+benchmarks: True
