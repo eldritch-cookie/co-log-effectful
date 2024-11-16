@@ -104,6 +104,19 @@
           otherOverlays = [
           ];
         };
+        haskellProjects.ghcHackage = {
+          basePackages = pkgs.haskell.packages.ghc963;
+          autoWire = ["devShells" "checks" "apps" "packages"];
+          defaults.devShell.tools = hp: {inherit (hp) cabal-install haskell-language-server;};
+          devShell = {
+            tools = hp:
+              with hp; {
+                haskell-dap = haskell-dap;
+              };
+          };
+          otherOverlays = [
+          ];
+        };
         devshells.default = {
           devshell = {
             packagesFrom = [config.haskellProjects.default.outputs.devShell];

@@ -17,7 +17,7 @@ synopsis:        effectful log effect using co-log-core
 description:
   co-log-effectful provides a `Log` effect for effectful that can use `LogAction`s in the `Eff` monad
 
-category:        library, logging, control, bsd3 
+category:        library, logging, control
 
 -- The package version.
 -- See the Haskell package versioning policy (PVP) for standards
@@ -47,7 +47,10 @@ maintainer:      eldritch.cookie@disroot.org
 build-type:      Simple
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
-extra-doc-files: CHANGELOG.md
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
 tested-with:     GHC ==9.6.6 || ==9.10.1
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
@@ -56,7 +59,7 @@ tested-with:     GHC ==9.6.6 || ==9.10.1
 common deps
   ghc-options:        -Wall -fplugin=Effectful.Plugin
   build-depends:
-    , base              >=4.18.2 && <5
+    , base              >=4.18.1 && <5
     , bytestring        >=0.11.5 && <1
     , co-log-core       >=0.3.2  && <1
     , effectful         >=2.3.1  && <3
