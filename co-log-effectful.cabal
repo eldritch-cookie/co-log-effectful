@@ -13,6 +13,11 @@ cabal-version:   3.4
 --
 -- The name of the package.
 name:            co-log-effectful
+synopsis:        effectful log effect using co-log-core
+description:
+  co-log-effectful provides a `Log` effect for effectful that can use `LogAction`s in the `Eff` monad
+
+category:        library, logging, control, bsd3 
 
 -- The package version.
 -- See the Haskell package versioning policy (PVP) for standards
@@ -22,12 +27,8 @@ name:            co-log-effectful
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
 version:         0.0.0.1
-
--- A short (one-line) description of the package.
--- synopsis:
-
--- A longer description of the package.
--- description:
+homepage:        https://github.com/eldritch-cookie/co-log-effectful
+bug-reports:     https://github.com/eldritch-cookie/co-log-effectful/issues
 
 -- The license under which the package is released.
 license:         BSD-3-Clause
@@ -47,6 +48,7 @@ build-type:      Simple
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
 extra-doc-files: CHANGELOG.md
+tested-with:     GHC ==9.6.6 || ==9.10.1
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 -- extra-source-files:
@@ -54,16 +56,13 @@ extra-doc-files: CHANGELOG.md
 common deps
   ghc-options:        -Wall -fplugin=Effectful.Plugin
   build-depends:
-    , base
-    , bytestring
-    , co-log-core
-    , directory
-    , effectful
-    , effectful-core
-    , effectful-plugin
-    , file-io
-    , filepath
-    , text
+    , base              >=4.18.2 && <5
+    , bytestring        >=0.11.5 && <1
+    , co-log-core       >=0.3.2  && <1
+    , effectful         >=2.3.1  && <3
+    , effectful-core    >=2.3.1  && <3
+    , effectful-plugin  >=1.1.0  && <2
+    , text              >=2.0.2  && <3
 
   default-extensions:
     DataKinds
@@ -97,10 +96,14 @@ test-suite co-log-effectful-test
   other-modules:      Effectful.CologTest
   build-depends:
     , co-log-effectful
-    , QuickCheck
-    , tasty
-    , tasty-golden
-    , tasty-hunit
-    , tasty-quickcheck
+    , QuickCheck        >=2.14.3
+    , tasty             >=1.4.3
+    , tasty-golden      >=2.3.5
+    , tasty-hunit       >=0.10.2
+    , tasty-quickcheck  >=0.10.2
 
   build-tool-depends: tasty-discover:tasty-discover
+
+source-repository head
+  type:     git
+  location: https://github.com/eldritch-cookie/co-log-effectful
