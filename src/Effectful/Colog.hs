@@ -12,7 +12,7 @@ module Effectful.Colog (
   -- ** 'LogAction's
   tellLogEff,
 
-  -- *** IOE constrained
+  -- *** 'FileSystem' constrained
   byteStringLogEff,
   textLogEff,
 
