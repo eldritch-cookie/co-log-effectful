@@ -19,7 +19,9 @@
       url = "github:numtide/devshell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    haskell-flake.url = "github:srid/haskell-flake";
+    haskell-flake = {
+      url = "github:srid/haskell-flake";
+    };
   };
 
   outputs = inputs @ {
@@ -51,7 +53,7 @@
         treefmt.programs = {
           alejandra.enable = true;
           cabal-fmt.enable = true;
-          ormolu = {
+          fourmolu = {
             enable = true;
             package = pkgs.haskellPackages.fourmolu;
           };
@@ -71,7 +73,10 @@
         haskellProjects.default = {
           basePackages = pkgs.haskell.packages.ghc910;
           autoWire = ["checks" "apps" "packages"];
-          defaults.devShell.tools = hp: {inherit (hp) cabal-install haskell-language-server;};
+          defaults.devShell.tools = hp: {
+            inherit (hp) haskell-language-server;
+            inherit (pkgs) cabal-install;
+          };
           devShell = {
             tools = hp:
               with hp; {
@@ -80,28 +85,15 @@
           };
           otherOverlays = [
             (hself: hsuper: {
-              warp = pkgs.haskell.lib.dontCheck hsuper.warp_3_4_3;
-              http-semantics =
-                hself.callHackageDirect {
-                  pkg = "http-semantics";
-                  ver = "0.2.1";
-                  sha256 = "sha256-Mpog3BRVV2Wyba7Nuzsa8Dzb8oATLnoxCpvF31EI2JY=";
-                }
-                {};
+              primitive-unlifted = pkgs.haskell.lib.doJailbreak hsuper.primitive-unlifted;
+              extensions = pkgs.haskell.lib.dontCheck hsuper.extensions;
+              hw-prim = pkgs.haskell.lib.dontCheck hsuper.hw-prim;
+              stan = pkgs.haskell.lib.dontCheck (hself.callHackageDirect {
+                pkg = "stan";
+                ver = "0.1.3.0";
+                sha256 = "sha256-DHlK5Q6r/N7lRXgDMHJtwqDJi71EcTmaZKDRnpBTzrE=";
+              } {});
             })
-          ];
-        };
-        haskellProjects.ghc96 = {
-          basePackages = pkgs.haskell.packages.ghc96;
-          autoWire = ["devShells" "checks" "apps" "packages"];
-          defaults.devShell.tools = hp: {inherit (hp) cabal-install haskell-language-server;};
-          devShell = {
-            tools = hp:
-              with hp; {
-                haskell-dap = haskell-dap;
-              };
-          };
-          otherOverlays = [
           ];
         };
         haskellProjects.ghcHackage = {
