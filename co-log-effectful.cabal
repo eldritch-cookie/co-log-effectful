@@ -99,6 +99,7 @@ test-suite co-log-effectful-test
   other-modules:      Effectful.CologTest
   build-depends:
     , co-log-effectful
+    , knob
     , QuickCheck        >=2.14.3
     , tasty             >=1.4.3
     , tasty-golden      >=2.3.5

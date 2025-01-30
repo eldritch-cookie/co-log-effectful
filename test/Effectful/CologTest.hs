@@ -2,9 +2,15 @@
 
 module Effectful.CologTest where
 
-import Data.Text (Text, pack)
+import Data.ByteString (ByteString)
+import Data.String (IsString (..))
+import Data.Text (Text)
+import Data.Text.Encoding
 
 -- import Test.Tasty
+
+import Data.Knob
+import System.IO (BufferMode (..), IOMode (..), hSetBuffering)
 import Test.Tasty.QuickCheck
 
 -- import Test.Tasty.HUnit
@@ -12,12 +18,15 @@ import Test.Tasty.QuickCheck
 import Effectful
 import Effectful.Colog
 import Effectful.Concurrent.Async (runConcurrent, wait, withAsync)
+import Effectful.FileSystem (runFileSystem)
 import Effectful.Labeled
 import Effectful.Provider
 import Effectful.Writer.Static.Shared (runWriter)
 
 instance Arbitrary Text where
-  arbitrary = fmap pack arbitrary
+  arbitrary = fmap fromString arbitrary
+instance Arbitrary ByteString where
+  arbitrary = fmap fromString arbitrary
 
 prop_tellEquals :: Text -> Property
 prop_tellEquals t = runPureEff $ do
@@ -26,8 +35,7 @@ prop_tellEquals t = runPureEff $ do
 
 prop_labeledLogShared :: Text -> Property
 prop_labeledLogShared msg =
-  property @Property
-    . runPureEff
+  runPureEff
     . fmap ((msg ===) . snd)
     . runLabeled runLogWriter
     . labeled
@@ -35,8 +43,7 @@ prop_labeledLogShared msg =
 
 prop_providerLogShared :: Text -> Property
 prop_providerLogShared msg =
-  property @Property
-    . runPureEff
+  runPureEff
     . fmap ((=== msg) . snd)
     . runWriter @Text
     . runProvider_ (runLogAction)
@@ -52,3 +59,28 @@ prop_tellConcurrent m1 m2 =
     . runWriter @Text
     . runLogAction tellLogEff
     $ logMsg m1 >> withAsync (logMsg m2) (\a -> wait a >> pure ())
+
+prop_ByteStringLogEff :: ByteString -> Property
+prop_ByteStringLogEff bs =
+  ioProperty @Property
+    . runEff
+    . runFileSystem
+    $ do
+      k <- newKnob mempty
+      hdl <- newFileHandle k "prop_ByteStringLogEff" ReadWriteMode
+      liftIO $ hSetBuffering hdl NoBuffering
+      runLogAction (byteStringLogEff hdl) $ logMsg bs
+      bn <- Data.Knob.getContents k
+      pure $ bs === bn
+prop_TextLogEff :: Text -> Property
+prop_TextLogEff bs =
+  ioProperty @Property
+    . runEff
+    . runFileSystem
+    $ do
+      k <- newKnob mempty
+      hdl <- newFileHandle k "prop_ByteStringLogEff" ReadWriteMode
+      liftIO $ hSetBuffering hdl NoBuffering
+      runLogAction (textLogEff hdl) $ logMsg bs
+      bn <- Data.Knob.getContents k
+      pure $ bs === decodeUtf8Lenient bn
