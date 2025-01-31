@@ -21,6 +21,7 @@ import Effectful.Concurrent.Async (runConcurrent, wait, withAsync)
 import Effectful.FileSystem (runFileSystem)
 import Effectful.Labeled
 import Effectful.Provider
+import Effectful.State.Static.Shared (execState)
 import Effectful.Writer.Static.Shared (runWriter)
 
 instance Arbitrary Text where
@@ -28,21 +29,21 @@ instance Arbitrary Text where
 instance Arbitrary ByteString where
   arbitrary = fmap fromString arbitrary
 
-prop_tellEquals :: Text -> Property
-prop_tellEquals t = runPureEff $ do
+prop_tellBasic :: Text -> Property
+prop_tellBasic t = runPureEff $ do
   (_, t2) <- runLogWriter $ logMsg t
   pure $ t === t2
 
-prop_labeledLogShared :: Text -> Property
-prop_labeledLogShared msg =
+prop_labeledBasic :: Text -> Property
+prop_labeledBasic msg =
   runPureEff
     . fmap ((msg ===) . snd)
     . runLabeled runLogWriter
     . labeled
     $ logMsg msg
 
-prop_providerLogShared :: Text -> Property
-prop_providerLogShared msg =
+prop_providerBasic :: Text -> Property
+prop_providerBasic msg =
   runPureEff
     . fmap ((=== msg) . snd)
     . runWriter @Text
@@ -60,6 +61,14 @@ prop_tellConcurrent m1 m2 =
     . runLogAction tellLogEff
     $ logMsg m1 >> withAsync (logMsg m2) (\a -> wait a >> pure ())
 
+prop_tellStatefulAfter :: Text -> Text -> Property
+prop_tellStatefulAfter t ts =
+  runPureEff
+    . fmap ((t ===) . snd)
+    . runLogWriter
+    . execState ts
+    $ logMsg t
+
 prop_ByteStringLogEff :: ByteString -> Property
 prop_ByteStringLogEff bs =
   ioProperty @Property
@@ -72,6 +81,7 @@ prop_ByteStringLogEff bs =
       runLogAction (byteStringLogEff hdl) $ logMsg bs
       bn <- Data.Knob.getContents k
       pure $ bs === bn
+
 prop_TextLogEff :: Text -> Property
 prop_TextLogEff bs =
   ioProperty @Property
